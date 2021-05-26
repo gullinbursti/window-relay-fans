@@ -1,4 +1,7 @@
 
+#define RECORD_GAP_MICROS 19000
+
+
 #include <Arduino.h>
 #include <IRremote.h>
 #include "PinDefinitionsAndMore.h"
@@ -7,8 +10,15 @@
 #define RELAY_PIN  6
 #define TOGGLE_PIN 8
 
+
 // debouncer
 bool btnUp = true;
+
+// repeat / history
+const unsigned long repeatDuration = 952500;
+unsigned int prevMillis = 0;
+unsigned int prevCmd = 0x0;
+
 
 void setup()  {
   Serial.begin(9600);
@@ -25,13 +35,13 @@ void setup()  {
 
 void loop() {
 
-  // btn is on, set debouncer
+  // btn is pressed, set debouncer
   if (digitalRead(TOGGLE_PIN) == HIGH && btnUp) {
     Serial.println("BTN DN");
     btnUp = false;
   }
 
-  // btn deressed 1st time, perform action
+  // btn depress 1st time, perform action
   if (digitalRead(TOGGLE_PIN) == LOW && !btnUp) {
     Serial.println("BTN UP");
 
@@ -62,23 +72,33 @@ void loop() {
 //      IrReceiver.printIRResultShort(&Serial);
 
 
-      if (IrReceiver.decodedIRData.address == 0x0) {
+    // parse signal
+    if (IrReceiver.decodedIRData.address == 0x0) {
 
-        // toggle on/off
-        if (IrReceiver.decodedIRData.command == 0x46) {
+      // toggle on/off
+      if (IrReceiver.decodedIRData.command == 0x46) {
+       
+        // repeat cmd, act if interval passed
+        if (prevCmd != IrReceiver.decodedIRData.command || millis() > prevMillis + repeatDuration) {
           digitalWrite(RELAY_PIN, (digitalRead(RELAY_PIN) == LOW) ? HIGH : LOW);
-
-        // turn off
-        } else if (IrReceiver.decodedIRData.command == 0x45) {
-          digitalWrite(RELAY_PIN, LOW);
-
-        // turn on
-        } else if (IrReceiver.decodedIRData.command == 0x47) {
-          digitalWrite(RELAY_PIN, HIGH);
         }
+    
+      // turn off
+      } else if (IrReceiver.decodedIRData.command == 0x45) {
+        digitalWrite(RELAY_PIN, LOW);
+    
+      // turn on
+      } else if (IrReceiver.decodedIRData.command == 0x47) {
+        digitalWrite(RELAY_PIN, HIGH);
       }
     }
 
-    IrReceiver.resume();
+    // update last
+    prevCmd = IrReceiver.decodedIRData.command;
+    prevMillis = millis();
   }
-}
+    }
+
+    // re-enable receiving
+    IrReceiver.resume();
+} 
