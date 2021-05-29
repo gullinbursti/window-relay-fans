@@ -69,14 +69,15 @@ void loop() {
 //      Serial.print(IrReceiver.decodedIRData.decodedRawData, HEX);
 //      Serial.print(" =-= ");           
 //      Serial.println();
-//      IrReceiver.printIRResultShort(&Serial);
+      IrReceiver.printIRResultShort(&Serial);
 
 
-    // parse signal
+    // BASIC remote
     if (IrReceiver.decodedIRData.address == 0x0) {
 
       // toggle on/off
       if (IrReceiver.decodedIRData.command == 0x46) {
+        Serial.println(F("PWR TOGGLE"));
        
         // repeat cmd, act if interval passed
         if (prevCmd != IrReceiver.decodedIRData.command || millis() > prevMillis + repeatDuration) {
@@ -85,10 +86,36 @@ void loop() {
     
       // turn off
       } else if (IrReceiver.decodedIRData.command == 0x45) {
+        Serial.println(F("TURN OFF"));
         digitalWrite(RELAY_PIN, LOW);
     
       // turn on
       } else if (IrReceiver.decodedIRData.command == 0x47) {
+        Serial.println(F("TURN ON"));
+        digitalWrite(RELAY_PIN, HIGH);
+      }
+      
+
+    // SAMSUNG remote
+    } else if (IrReceiver.decodedIRData.address == 0x707) {
+
+      // toggle on/off (rec)
+      if (IrReceiver.decodedIRData.command == 0x49) {
+        Serial.println(F("PWR TOGGLE"));
+        
+        // repeat cmd, act if interval passed
+        if (prevCmd != IrReceiver.decodedIRData.command || millis() > prevMillis + (repeatDuration * 5)) {
+          digitalWrite(RELAY_PIN, (digitalRead(RELAY_PIN) == LOW) ? HIGH : LOW);
+        }
+    
+      // turn off (prev)
+      } else if (IrReceiver.decodedIRData.command == 0x45) {
+        Serial.println(F("TURN OFF"));
+        digitalWrite(RELAY_PIN, LOW);
+    
+      // turn on (next)
+      } else if (IrReceiver.decodedIRData.command == 0x48) {
+        Serial.println(F("TURN ON"));
         digitalWrite(RELAY_PIN, HIGH);
       }
     }
