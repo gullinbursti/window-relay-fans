@@ -3,11 +3,14 @@
 
 
 #include <Arduino.h>
+#include <CuteBuzzerSounds.h>
 #include <IRremote.h>
+
 #include "PinDefinitionsAndMore.h"
 
 
-#define RELAY_PIN  6
+#define RELAY1_PIN 6
+#define RELAY2_PIN 7
 #define TOGGLE_PIN 8
 
 
@@ -15,7 +18,7 @@
 bool btnUp = true;
 
 // repeat / history
-const unsigned long repeatDuration = 952500;
+const unsigned long repeatDuration = 95250;
 unsigned int prevMillis = 0;
 unsigned int prevCmd = 0x0;
 
@@ -25,7 +28,9 @@ void setup()  {
 
   // pin setup
   pinMode(TOGGLE_PIN, INPUT);
-  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(RELAY1_PIN, OUTPUT);
+  pinMode(RELAY2_PIN, OUTPUT);
+//  cute.init(BUZZER_PIN);
 
   // init ir
   IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
@@ -45,8 +50,20 @@ void loop() {
   if (digitalRead(TOGGLE_PIN) == LOW && !btnUp) {
     Serial.println("BTN UP");
 
+//    cute.play(S_BUTTON_PUSHED);
+
     // toggle on/off based on current state
-    digitalWrite(RELAY_PIN, (digitalRead(RELAY_PIN) == LOW) ? HIGH : LOW);
+    if (digitalRead(RELAY1_PIN) == LOW) {
+      digitalWrite(RELAY1_PIN, HIGH);
+      digitalWrite(RELAY2_PIN, HIGH);
+    
+    } else {
+      digitalWrite(RELAY1_PIN, LOW);
+      digitalWrite(RELAY2_PIN, LOW);
+    }
+
+    
+//    digitalWrite(RELAY1_PIN, (digitalRead(RELAY1_PIN) == LOW) ? HIGH : LOW);
     btnUp = true;
   }
 
@@ -72,60 +89,66 @@ void loop() {
       IrReceiver.printIRResultShort(&Serial);
 
 
-    // BASIC remote
-    if (IrReceiver.decodedIRData.address == 0x0) {
-
-      // toggle on/off
-      if (IrReceiver.decodedIRData.command == 0x46) {
-        Serial.println(F("PWR TOGGLE"));
-       
-        // repeat cmd, act if interval passed
-        if (prevCmd != IrReceiver.decodedIRData.command || millis() > prevMillis + repeatDuration) {
-          digitalWrite(RELAY_PIN, (digitalRead(RELAY_PIN) == LOW) ? HIGH : LOW);
-        }
-    
-      // turn off
-      } else if (IrReceiver.decodedIRData.command == 0x45) {
-        Serial.println(F("TURN OFF"));
-        digitalWrite(RELAY_PIN, LOW);
-    
-      // turn on
-      } else if (IrReceiver.decodedIRData.command == 0x47) {
-        Serial.println(F("TURN ON"));
-        digitalWrite(RELAY_PIN, HIGH);
-      }
+      // BASIC remote
+      if (IrReceiver.decodedIRData.address == 0x0) {
+  
+        // toggle on/off
+        if (IrReceiver.decodedIRData.command == 0x46) {
+          Serial.println(F("PWR TOGGLE"));
+         
+          // repeat cmd, act if interval passed
+//          if (prevCmd != IrReceiver.decodedIRData.command || millis() > prevMillis + repeatDuration) {
+            digitalWrite(RELAY2_PIN, (digitalRead(RELAY2_PIN) == LOW) ? HIGH : LOW);
+//            cute.play((digitalRead(RELAY2_PIN) == LOW) ? S_CONNECTION : S_DISCONNECTION);
+//          }
       
-
-    // SAMSUNG remote
-    } else if (IrReceiver.decodedIRData.address == 0x707) {
-
-      // toggle on/off (rec)
-      if (IrReceiver.decodedIRData.command == 0x49) {
-        Serial.println(F("PWR TOGGLE"));
-        
-        // repeat cmd, act if interval passed
-        if (prevCmd != IrReceiver.decodedIRData.command || millis() > prevMillis + (repeatDuration * 5)) {
-          digitalWrite(RELAY_PIN, (digitalRead(RELAY_PIN) == LOW) ? HIGH : LOW);
+        // turn off
+        } else if (IrReceiver.decodedIRData.command == 0x45) {
+          Serial.println(F("TURN OFF"));
+          digitalWrite(RELAY2_PIN, LOW);
+//          cute.play(S_DISCONNECTION);
+      
+        // turn on
+        } else if (IrReceiver.decodedIRData.command == 0x47) {
+          Serial.println(F("TURN ON"));
+          digitalWrite(RELAY2_PIN, HIGH);
+//          cute.play(S_CONNECTION);
         }
-    
-      // turn off (prev)
-      } else if (IrReceiver.decodedIRData.command == 0x45) {
-        Serial.println(F("TURN OFF"));
-        digitalWrite(RELAY_PIN, LOW);
-    
-      // turn on (next)
-      } else if (IrReceiver.decodedIRData.command == 0x48) {
-        Serial.println(F("TURN ON"));
-        digitalWrite(RELAY_PIN, HIGH);
+        
+  
+      // SAMSUNG remote
+      } else if (IrReceiver.decodedIRData.address == 0x707) {
+  
+        // toggle on/off (rec)
+        if (IrReceiver.decodedIRData.command == 0x49) {
+          Serial.println(F("PWR TOGGLE"));
+          
+          // repeat cmd, act if interval passed
+//          if (prevCmd != IrReceiver.decodedIRData.command || millis() > prevMillis + (repeatDuration * 5)) {
+            digitalWrite(RELAY2_PIN, (digitalRead(RELAY2_PIN) == LOW) ? HIGH : LOW);
+//            cute.play((digitalRead(RELAY2_PIN) == LOW) ? S_CONNECTION : S_DISCONNECTION);
+//          }
+      
+        // turn off (prev)
+        } else if (IrReceiver.decodedIRData.command == 0x45) {
+          Serial.println(F("TURN OFF"));
+          digitalWrite(RELAY2_PIN, LOW);
+//          cute.play(S_DISCONNECTION);
+      
+        // turn on (next)
+        } else if (IrReceiver.decodedIRData.command == 0x48) {
+          Serial.println(F("TURN ON"));
+          digitalWrite(RELAY2_PIN, HIGH);
+//          cute.play(S_CONNECTION);
+        }
       }
+  
+      // update last
+      prevCmd = IrReceiver.decodedIRData.command;
+      prevMillis = millis();
     }
-
-    // update last
-    prevCmd = IrReceiver.decodedIRData.command;
-    prevMillis = millis();
   }
-    }
 
-    // re-enable receiving
-    IrReceiver.resume();
+  // re-enable receiving
+  IrReceiver.resume();
 } 
